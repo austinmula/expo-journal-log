@@ -30,7 +30,7 @@ export function DeletedEntryCard({
     : config.trashRetentionDays;
 
   return (
-    <Card style={[styles.card, { opacity: 0.8 }]}>
+    <Card style={{ ...styles.card, opacity: 0.8 }}>
       <Text
         style={[styles.title, { color: theme.colors.text }]}
         numberOfLines={1}
