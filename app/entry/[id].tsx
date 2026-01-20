@@ -14,12 +14,14 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { useEntryStore } from '@/stores';
+import { useEntryStore, useTagStore } from '@/stores';
 import { MoodSelector } from '@/components/entries/MoodSelector';
+import { TagPicker, TagBadge } from '@/components/tags';
 import { Button, LoadingState } from '@/components/ui';
-import { MoodType } from '@/types';
+import { MoodType, Tag } from '@/types';
 import { formatDateTime } from '@/utils';
 import { config } from '@/constants/config';
+import { getMoodConfig } from '@/constants/moods';
 
 export default function EntryScreen() {
   const theme = useTheme();
@@ -27,13 +29,16 @@ export default function EntryScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getEntryById, updateEntry, deleteEntry, loadEntries } = useEntryStore();
+  const { tags, loadTags } = useTagStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType | undefined>();
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [createdAt, setCreatedAt] = useState<Date | null>(null);
+  const [isTagPickerVisible, setIsTagPickerVisible] = useState(false);
 
   const contentRef = useRef<TextInput>(null);
   const hasLoadedRef = useRef(false);
@@ -44,7 +49,7 @@ export default function EntryScreen() {
       if (hasLoadedRef.current || !id) return;
       hasLoadedRef.current = true;
 
-      // Ensure entries are loaded first
+      await loadTags();
       await loadEntries();
 
       const entry = getEntryById(id);
@@ -53,12 +58,13 @@ export default function EntryScreen() {
         setContent(entry.content);
         setMood(entry.mood);
         setCreatedAt(entry.createdAt);
+        setSelectedTagIds(entry.tags.map((t) => t.id));
       }
       setIsLoading(false);
     };
 
     loadEntry();
-  }, [id, getEntryById, loadEntries]);
+  }, [id, getEntryById, loadEntries, loadTags]);
 
   const handleSave = useCallback(async () => {
     if (!id) return;
@@ -68,11 +74,12 @@ export default function EntryScreen() {
         title: title.trim() || 'Untitled',
         content: content.trim(),
         mood,
+        tagIds: selectedTagIds,
       });
     } catch (error) {
       console.error('Failed to save entry:', error);
     }
-  }, [id, title, content, mood, updateEntry]);
+  }, [id, title, content, mood, selectedTagIds, updateEntry]);
 
   const { isSaving, hasUnsavedChanges, scheduleAutoSave, saveNow } = useAutoSave({
     delay: config.autoSaveDelay,
@@ -91,6 +98,11 @@ export default function EntryScreen() {
 
   const handleMoodChange = (newMood: MoodType | undefined) => {
     setMood(newMood);
+    scheduleAutoSave();
+  };
+
+  const handleTagsChange = (tagIds: string[]) => {
+    setSelectedTagIds(tagIds);
     scheduleAutoSave();
   };
 
@@ -135,6 +147,9 @@ export default function EntryScreen() {
       </View>
     );
   }
+
+  const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id));
+  const moodConfig = getMoodConfig(mood);
 
   return (
     <>
@@ -221,7 +236,36 @@ export default function EntryScreen() {
                 textAlignVertical="top"
               />
 
-              <View style={[styles.moodSection, { borderTopColor: theme.colors.borderLight }]}>
+              {/* Tags section */}
+              <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+                    Tags
+                  </Text>
+                  <Button
+                    title={selectedTags.length > 0 ? 'Edit' : 'Add'}
+                    variant="ghost"
+                    size="small"
+                    onPress={() => setIsTagPickerVisible(true)}
+                  />
+                </View>
+                {selectedTags.length > 0 ? (
+                  <View style={styles.tagList}>
+                    {selectedTags.map((tag) => (
+                      <TagBadge key={tag.id} tag={tag} />
+                    ))}
+                  </View>
+                ) : (
+                  <Pressable onPress={() => setIsTagPickerVisible(true)}>
+                    <Text style={[styles.placeholder, { color: theme.colors.textTertiary }]}>
+                      Tap to add tags
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+
+              {/* Mood section */}
+              <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
                 <MoodSelector
                   selectedMood={mood}
                   onSelectMood={handleMoodChange}
@@ -240,14 +284,23 @@ export default function EntryScreen() {
                 {title || 'Untitled'}
               </Text>
 
-              {mood && (
-                <View style={styles.moodDisplay}>
-                  <Text style={styles.moodEmoji}>
-                    {mood === 'great' ? '😊' :
-                     mood === 'good' ? '🙂' :
-                     mood === 'okay' ? '😐' :
-                     mood === 'bad' ? '😔' : '😢'}
-                  </Text>
+              {(moodConfig || selectedTags.length > 0) && (
+                <View style={styles.metaRow}>
+                  {moodConfig && (
+                    <View style={styles.moodDisplay}>
+                      <Text style={styles.moodEmoji}>{moodConfig.emoji}</Text>
+                      <Text style={[styles.moodLabel, { color: moodConfig.color }]}>
+                        {moodConfig.label}
+                      </Text>
+                    </View>
+                  )}
+                  {selectedTags.length > 0 && (
+                    <View style={styles.tagList}>
+                      {selectedTags.map((tag) => (
+                        <TagBadge key={tag.id} tag={tag} size="small" />
+                      ))}
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -258,6 +311,13 @@ export default function EntryScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <TagPicker
+        visible={isTagPickerVisible}
+        onClose={() => setIsTagPickerVisible(false)}
+        selectedTagIds={selectedTagIds}
+        onTagsChange={handleTagsChange}
+      />
     </>
   );
 }
@@ -303,15 +363,46 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 28,
   },
-  moodSection: {
-    paddingTop: 24,
+  section: {
+    paddingTop: 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
   },
-  moodDisplay: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  tagList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  placeholder: {
+    fontSize: 14,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
     marginBottom: 16,
   },
+  moodDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   moodEmoji: {
-    fontSize: 32,
+    fontSize: 20,
+  },
+  moodLabel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   savingIndicator: {
     fontSize: 12,
