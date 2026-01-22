@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { JournalEntry } from '@/types';
 import { getSmartDate, getPreview } from '@/utils';
 import { config } from '@/constants/config';
+import { fonts } from '@/constants/fonts';
 
 interface DeletedEntryCardProps {
   entry: JournalEntry;
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: fonts.serif.semiBold,
     marginBottom: 4,
   },
   preview: {
