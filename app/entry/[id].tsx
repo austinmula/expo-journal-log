@@ -22,6 +22,7 @@ import { MoodType, Tag } from '@/types';
 import { formatDateTime } from '@/utils';
 import { config } from '@/constants/config';
 import { getMoodConfig } from '@/constants/moods';
+import { fonts } from '@/constants/fonts';
 
 export default function EntryScreen() {
   const theme = useTheme();
@@ -342,14 +343,14 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: fonts.serif.semiBold,
     paddingVertical: 16,
     borderBottomWidth: 1,
     marginBottom: 16,
   },
   titleDisplay: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: fonts.serif.bold,
     marginBottom: 16,
     lineHeight: 36,
   },

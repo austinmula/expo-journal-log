@@ -21,6 +21,7 @@ import { Button } from '@/components/ui';
 import { MoodType } from '@/types';
 import { generateTitleFromContent } from '@/utils';
 import { config } from '@/constants/config';
+import { fonts } from '@/constants/fonts';
 
 export default function NewEntryScreen() {
   const theme = useTheme();
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   },
   titleInput: {
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: fonts.serif.semiBold,
     paddingVertical: 16,
     borderBottomWidth: 1,
     marginBottom: 16,
