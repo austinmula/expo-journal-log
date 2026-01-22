@@ -144,8 +144,8 @@ const borderRadius: ThemeBorderRadius = {
 
 export const lightTheme: Theme = {
   colors: {
-    background: colors.warmWhite.primary,
-    surface: '#FFFFFF',
+    background: '#FFFDF7',  // Warm paper-like off-white
+    surface: '#FFFEFA',     // Slightly warmer white for cards
     surfaceElevated: '#FFFFFF',
     primary: colors.teal[600],
     primaryLight: colors.teal[100],
