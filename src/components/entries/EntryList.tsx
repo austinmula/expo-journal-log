@@ -1,12 +1,12 @@
 import React from 'react';
-import { FlatList, View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { FlatList, StyleSheet, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { JournalEntry } from '@/types';
 import { EntryCard } from './EntryCard';
+import { DateSectionHeader } from './DateSectionHeader';
 import { EmptyState } from '@/components/ui';
-import { groupEntriesByDate, getDateGroupLabel } from '@/utils';
-import { format } from 'date-fns';
+import { groupEntriesByDate } from '@/utils';
 
 interface EntryListProps {
   entries: JournalEntry[];
@@ -78,21 +78,16 @@ export function EntryList({
     return items;
   }, [entries, showDateHeaders]);
 
-  const renderItem = ({ item }: { item: ListItem }) => {
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
     if (item.type === 'header') {
-      return (
-        <View style={[styles.headerContainer, { marginBottom: theme.spacing.sm }]}>
-          <Text style={[styles.headerText, { color: theme.colors.textSecondary }]}>
-            {getDateGroupLabel(item.data as string)}
-          </Text>
-        </View>
-      );
+      return <DateSectionHeader dateKey={item.data as string} />;
     }
 
     return (
       <EntryCard
         entry={item.data as JournalEntry}
         onPress={handleEntryPress}
+        index={index}
       />
     );
   };
@@ -137,13 +132,6 @@ export function EntryList({
 const styles = StyleSheet.create({
   listContent: {
     flexGrow: 1,
-  },
-  headerContainer: {
-    marginTop: 8,
-  },
-  headerText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   emptyState: {
     flex: 1,
