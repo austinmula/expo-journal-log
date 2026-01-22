@@ -78,7 +78,7 @@ export function EntryList({
     return items;
   }, [entries, showDateHeaders]);
 
-  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
+  const renderItem = ({ item }: { item: ListItem }) => {
     if (item.type === 'header') {
       return <DateSectionHeader dateKey={item.data as string} />;
     }
@@ -87,7 +87,6 @@ export function EntryList({
       <EntryCard
         entry={item.data as JournalEntry}
         onPress={handleEntryPress}
-        index={index}
       />
     );
   };

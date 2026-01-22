@@ -1,12 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { Badge } from '@/components/ui';
 import { useTheme } from '@/hooks/useTheme';
 import { JournalEntry } from '@/types';
@@ -16,73 +9,31 @@ import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
 interface EntryCardProps {
   entry: JournalEntry;
   onPress: (entry: JournalEntry) => void;
-  index?: number;
 }
 
 // Default accent color when no mood is set
 const DEFAULT_ACCENT_COLOR = colors.stone[300];
 
-export function EntryCard({ entry, onPress, index = 0 }: EntryCardProps) {
+export function EntryCard({ entry, onPress }: EntryCardProps) {
   const theme = useTheme();
   const moodConfig = getMoodConfig(entry.mood);
   const accentColor = moodConfig?.color || DEFAULT_ACCENT_COLOR;
 
-  const translateY = useSharedValue(20);
-  const opacity = useSharedValue(0);
-  const pressScale = useSharedValue(1);
-
-  useEffect(() => {
-    // Stagger the animation based on index (max 5 items animated)
-    const delay = Math.min(index, 5) * 50;
-
-    const timer = setTimeout(() => {
-      translateY.value = withSpring(0, {
-        damping: 20,
-        stiffness: 200,
-      });
-      opacity.value = withTiming(1, {
-        duration: 300,
-        easing: Easing.out(Easing.ease),
-      });
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [index]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value },
-      { scale: pressScale.value },
-    ],
-    opacity: opacity.value,
-  }));
-
-  const handlePressIn = () => {
-    pressScale.value = withSpring(0.98, { damping: 15, stiffness: 400 });
-  };
-
-  const handlePressOut = () => {
-    pressScale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  };
-
   return (
-    <AnimatedPressable
+    <Pressable
       onPress={() => onPress(entry)}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[
+      style={({ pressed }) => [
         styles.cardOuter,
         {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.borderLight,
           shadowColor: theme.colors.shadow,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.98 }] : [{ scale: 1 }],
         },
-        animatedStyle,
       ]}
     >
       {/* Mood accent bar */}
@@ -132,7 +83,7 @@ export function EntryCard({ entry, onPress, index = 0 }: EntryCardProps) {
           )}
         </View>
       </View>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
