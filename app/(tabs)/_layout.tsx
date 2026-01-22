@@ -1,9 +1,12 @@
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ComponentProps } from 'react';
 
-function TabBarIcon({ name, color }: { name: string; color: string }) {
-  return <Text style={[styles.icon, { color }]}>{name}</Text>;
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
+
+function TabBarIcon({ name, color }: { name: IoniconsName; color: string }) {
+  return <Ionicons name={name} size={24} color={color} />;
 }
 
 export default function TabLayout() {
@@ -32,37 +35,31 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Journal',
-          tabBarIcon: ({ color }) => <TabBarIcon name="book" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="book-outline" color={color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: 'Calendar',
-          tabBarIcon: ({ color }) => <TabBarIcon name="cal" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="calendar-outline" color={color} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: 'Search',
-          tabBarIcon: ({ color }) => <TabBarIcon name="find" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="search-outline" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <TabBarIcon name="gear" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="settings-outline" color={color} />,
         }}
       />
     </Tabs>
   );
 }
 
-const styles = StyleSheet.create({
-  icon: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-});
