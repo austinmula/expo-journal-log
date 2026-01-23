@@ -1,12 +1,15 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, ViewStyle, PressableProps } from 'react-native';
+import { Pressable, StyleSheet, ViewStyle, PressableProps } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
+import { ComponentProps } from 'react';
 
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 type IconButtonSize = 'small' | 'medium' | 'large';
 type IconButtonVariant = 'default' | 'primary' | 'ghost';
 
 interface IconButtonProps extends Omit<PressableProps, 'style'> {
-  icon: string;
+  icon: IoniconsName;
   size?: IconButtonSize;
   variant?: IconButtonVariant;
   style?: ViewStyle;
@@ -79,9 +82,7 @@ export function IconButton({
       disabled={disabled}
       {...props}
     >
-      <Text style={[styles.icon, { fontSize: iconSize, color: getIconColor() }]}>
-        {icon}
-      </Text>
+      <Ionicons name={icon} size={iconSize} color={getIconColor()} />
     </Pressable>
   );
 }
@@ -91,5 +92,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {},
 });
