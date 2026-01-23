@@ -1,14 +1,44 @@
 import { v4 as uuidv4 } from 'uuid';
 import { databaseService } from './database';
-import { JournalEntry, CreateEntryInput, UpdateEntryInput, Tag, MoodType, SyncStatus } from '@/types';
-import { EntryRow, TagRow } from '@/types/database';
+import { JournalEntry, CreateEntryInput, UpdateEntryInput, Tag, MoodType, SyncStatus, Category } from '@/types';
+import { EntryRow, TagRow, EntryWithCategoryRow } from '@/types/database';
 
-function mapRowToEntry(row: EntryRow, tags: Tag[] = []): JournalEntry {
+function mapRowToEntry(row: EntryRow, tags: Tag[] = [], category?: Category): JournalEntry {
   return {
     id: row.id,
     title: row.title,
     content: row.content,
     mood: row.mood as MoodType | undefined,
+    categoryId: row.category_id || undefined,
+    category,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+    deletedAt: row.deleted_at ? new Date(row.deleted_at) : undefined,
+    tags,
+    syncStatus: row.sync_status as SyncStatus,
+    syncVersion: row.sync_version,
+  };
+}
+
+function mapRowWithCategoryToEntry(row: EntryWithCategoryRow, tags: Tag[] = []): JournalEntry {
+  const category: Category | undefined = row.category_id && row.category_name
+    ? {
+        id: row.category_id,
+        name: row.category_name,
+        icon: row.category_icon || undefined,
+        color: row.category_color || '#6366F1',
+        sortOrder: row.category_sort_order || 0,
+        createdAt: row.category_created_at ? new Date(row.category_created_at) : new Date(),
+      }
+    : undefined;
+
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    mood: row.mood as MoodType | undefined,
+    categoryId: row.category_id || undefined,
+    category,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     deletedAt: row.deleted_at ? new Date(row.deleted_at) : undefined,
@@ -40,16 +70,23 @@ class EntryRepository {
   async getAll(): Promise<JournalEntry[]> {
     const db = databaseService.getDatabase();
 
-    const rows = await db.getAllAsync<EntryRow>(
-      `SELECT * FROM entries
-       WHERE deleted_at IS NULL
-       ORDER BY created_at DESC`
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.deleted_at IS NULL
+       ORDER BY e.created_at DESC`
     );
 
     const entries: JournalEntry[] = [];
     for (const row of rows) {
       const tags = await this.getTagsForEntry(row.id);
-      entries.push(mapRowToEntry(row, tags));
+      entries.push(mapRowWithCategoryToEntry(row, tags));
     }
 
     return entries;
@@ -58,8 +95,16 @@ class EntryRepository {
   async getById(id: string): Promise<JournalEntry | null> {
     const db = databaseService.getDatabase();
 
-    const row = await db.getFirstAsync<EntryRow>(
-      `SELECT * FROM entries WHERE id = ?`,
+    const row = await db.getFirstAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.id = ?`,
       [id]
     );
 
@@ -68,7 +113,7 @@ class EntryRepository {
     }
 
     const tags = await this.getTagsForEntry(id);
-    return mapRowToEntry(row, tags);
+    return mapRowWithCategoryToEntry(row, tags);
   }
 
   async create(input: CreateEntryInput): Promise<JournalEntry> {
@@ -77,9 +122,9 @@ class EntryRepository {
     const now = new Date().toISOString();
 
     await db.runAsync(
-      `INSERT INTO entries (id, title, content, mood, created_at, updated_at, sync_status, sync_version)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', 0)`,
-      [id, input.title, input.content, input.mood || null, now, now]
+      `INSERT INTO entries (id, title, content, mood, category_id, created_at, updated_at, sync_status, sync_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0)`,
+      [id, input.title, input.content, input.mood || null, input.categoryId || null, now, now]
     );
 
     // Add tags if provided
@@ -122,6 +167,11 @@ class EntryRepository {
     if (input.mood !== undefined) {
       updates.push('mood = ?');
       values.push(input.mood || null);
+    }
+
+    if (input.categoryId !== undefined) {
+      updates.push('category_id = ?');
+      values.push(input.categoryId || null);
     }
 
     if (updates.length > 0) {
@@ -184,16 +234,23 @@ class EntryRepository {
   async getDeleted(): Promise<JournalEntry[]> {
     const db = databaseService.getDatabase();
 
-    const rows = await db.getAllAsync<EntryRow>(
-      `SELECT * FROM entries
-       WHERE deleted_at IS NOT NULL
-       ORDER BY deleted_at DESC`
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.deleted_at IS NOT NULL
+       ORDER BY e.deleted_at DESC`
     );
 
     const entries: JournalEntry[] = [];
     for (const row of rows) {
       const tags = await this.getTagsForEntry(row.id);
-      entries.push(mapRowToEntry(row, tags));
+      entries.push(mapRowWithCategoryToEntry(row, tags));
     }
 
     return entries;
@@ -215,18 +272,25 @@ class EntryRepository {
   async getByDateRange(startDate: Date, endDate: Date): Promise<JournalEntry[]> {
     const db = databaseService.getDatabase();
 
-    const rows = await db.getAllAsync<EntryRow>(
-      `SELECT * FROM entries
-       WHERE deleted_at IS NULL
-       AND created_at >= ? AND created_at <= ?
-       ORDER BY created_at DESC`,
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.deleted_at IS NULL
+       AND e.created_at >= ? AND e.created_at <= ?
+       ORDER BY e.created_at DESC`,
       [startDate.toISOString(), endDate.toISOString()]
     );
 
     const entries: JournalEntry[] = [];
     for (const row of rows) {
       const tags = await this.getTagsForEntry(row.id);
-      entries.push(mapRowToEntry(row, tags));
+      entries.push(mapRowWithCategoryToEntry(row, tags));
     }
 
     return entries;
@@ -235,8 +299,15 @@ class EntryRepository {
   async getByTag(tagId: string): Promise<JournalEntry[]> {
     const db = databaseService.getDatabase();
 
-    const rows = await db.getAllAsync<EntryRow>(
-      `SELECT e.* FROM entries e
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
        JOIN entry_tags et ON e.id = et.entry_id
        WHERE et.tag_id = ? AND e.deleted_at IS NULL
        ORDER BY e.created_at DESC`,
@@ -246,7 +317,7 @@ class EntryRepository {
     const entries: JournalEntry[] = [];
     for (const row of rows) {
       const tags = await this.getTagsForEntry(row.id);
-      entries.push(mapRowToEntry(row, tags));
+      entries.push(mapRowWithCategoryToEntry(row, tags));
     }
 
     return entries;
@@ -255,17 +326,50 @@ class EntryRepository {
   async getByMood(mood: MoodType): Promise<JournalEntry[]> {
     const db = databaseService.getDatabase();
 
-    const rows = await db.getAllAsync<EntryRow>(
-      `SELECT * FROM entries
-       WHERE mood = ? AND deleted_at IS NULL
-       ORDER BY created_at DESC`,
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.mood = ? AND e.deleted_at IS NULL
+       ORDER BY e.created_at DESC`,
       [mood]
     );
 
     const entries: JournalEntry[] = [];
     for (const row of rows) {
       const tags = await this.getTagsForEntry(row.id);
-      entries.push(mapRowToEntry(row, tags));
+      entries.push(mapRowWithCategoryToEntry(row, tags));
+    }
+
+    return entries;
+  }
+
+  async getByCategory(categoryId: string): Promise<JournalEntry[]> {
+    const db = databaseService.getDatabase();
+
+    const rows = await db.getAllAsync<EntryWithCategoryRow>(
+      `SELECT e.*,
+              c.name as category_name,
+              c.icon as category_icon,
+              c.color as category_color,
+              c.sort_order as category_sort_order,
+              c.created_at as category_created_at
+       FROM entries e
+       LEFT JOIN categories c ON e.category_id = c.id
+       WHERE e.category_id = ? AND e.deleted_at IS NULL
+       ORDER BY e.created_at DESC`,
+      [categoryId]
+    );
+
+    const entries: JournalEntry[] = [];
+    for (const row of rows) {
+      const tags = await this.getTagsForEntry(row.id);
+      entries.push(mapRowWithCategoryToEntry(row, tags));
     }
 
     return entries;
