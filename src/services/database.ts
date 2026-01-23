@@ -2,6 +2,15 @@ import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'journal.db';
 
+// Default categories to seed on first run
+const DEFAULT_CATEGORIES = [
+  { id: 'default-personal', name: 'Personal', icon: 'journal-outline', color: '#6366F1', sortOrder: 0 },
+  { id: 'default-work', name: 'Work', icon: 'briefcase-outline', color: '#F59E0B', sortOrder: 1 },
+  { id: 'default-book', name: 'Book Notes', icon: 'book-outline', color: '#10B981', sortOrder: 2 },
+  { id: 'default-travel', name: 'Travel', icon: 'airplane-outline', color: '#EC4899', sortOrder: 3 },
+  { id: 'default-gratitude', name: 'Gratitude', icon: 'heart-outline', color: '#EF4444', sortOrder: 4 },
+];
+
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private static instance: DatabaseService;
@@ -32,6 +41,21 @@ class DatabaseService {
     // Enable foreign keys
     await this.db.execAsync('PRAGMA foreign_keys = ON;');
 
+    // Create categories table
+    await this.db.execAsync(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        icon TEXT,
+        color TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    // Seed default categories if table is empty
+    await this.seedDefaultCategories();
+
     // Create entries table
     await this.db.execAsync(`
       CREATE TABLE IF NOT EXISTS entries (
@@ -39,6 +63,7 @@ class DatabaseService {
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         mood TEXT,
+        category_id TEXT REFERENCES categories(id),
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         deleted_at TEXT,
@@ -46,6 +71,9 @@ class DatabaseService {
         sync_version INTEGER DEFAULT 0
       );
     `);
+
+    // Add category_id column to entries if it doesn't exist (migration for existing databases)
+    await this.addCategoryIdColumnIfNeeded();
 
     // Create tags table
     await this.db.execAsync(`
@@ -114,6 +142,55 @@ class DatabaseService {
     await this.db.execAsync(`
       CREATE INDEX IF NOT EXISTS idx_entries_deleted_at ON entries(deleted_at);
     `);
+
+    // Create index for category filtering
+    await this.db.execAsync(`
+      CREATE INDEX IF NOT EXISTS idx_entries_category ON entries(category_id);
+    `);
+  }
+
+  private async seedDefaultCategories(): Promise<void> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    // Check if categories already exist
+    const existingCount = await this.db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM categories'
+    );
+
+    if (existingCount && existingCount.count > 0) {
+      return; // Categories already seeded
+    }
+
+    const now = new Date().toISOString();
+
+    for (const category of DEFAULT_CATEGORIES) {
+      await this.db.runAsync(
+        `INSERT OR IGNORE INTO categories (id, name, icon, color, sort_order, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [category.id, category.name, category.icon, category.color, category.sortOrder, now]
+      );
+    }
+  }
+
+  private async addCategoryIdColumnIfNeeded(): Promise<void> {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    // Check if category_id column exists
+    const tableInfo = await this.db.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(entries)"
+    );
+
+    const hasCategoryId = tableInfo.some(col => col.name === 'category_id');
+
+    if (!hasCategoryId) {
+      await this.db.execAsync(
+        'ALTER TABLE entries ADD COLUMN category_id TEXT REFERENCES categories(id)'
+      );
+    }
   }
 
   getDatabase(): SQLite.SQLiteDatabase {
