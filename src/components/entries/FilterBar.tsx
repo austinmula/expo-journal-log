@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { useTagStore, useEntryStore } from '@/stores';
+import { useTagStore, useEntryStore, useCategoryStore } from '@/stores';
 import { MoodType } from '@/types';
 import { moodList } from '@/constants/moods';
 import { TagBadge } from '@/components/tags';
+import { CategoryBadge } from '@/components/categories';
 
 interface FilterBarProps {
   onClearFilters?: () => void;
@@ -13,19 +14,23 @@ interface FilterBarProps {
 export function FilterBar({ onClearFilters }: FilterBarProps) {
   const theme = useTheme();
   const { tags, loadTags } = useTagStore();
+  const { categories, loadCategories } = useCategoryStore();
   const {
     selectedTagId,
     selectedMood,
+    selectedCategoryId,
     setSelectedTag,
     setSelectedMood,
+    setSelectedCategory,
     clearFilters,
   } = useEntryStore();
 
   useEffect(() => {
     loadTags();
-  }, [loadTags]);
+    loadCategories();
+  }, [loadTags, loadCategories]);
 
-  const hasFilters = selectedTagId || selectedMood;
+  const hasFilters = selectedTagId || selectedMood || selectedCategoryId;
 
   const handleClearFilters = () => {
     clearFilters();
@@ -72,6 +77,35 @@ export function FilterBar({ onClearFilters }: FilterBarProps) {
             ))}
           </View>
         </View>
+
+        {/* Category filters */}
+        {categories.length > 0 && (
+          <View style={styles.filterGroup}>
+            <Text style={[styles.filterLabel, { color: theme.colors.textTertiary }]}>
+              Category
+            </Text>
+            <View style={styles.filterOptions}>
+              {categories.slice(0, 4).map((category) => (
+                <CategoryBadge
+                  key={category.id}
+                  category={category}
+                  size="small"
+                  selected={selectedCategoryId === category.id}
+                  onPress={() =>
+                    setSelectedCategory(
+                      selectedCategoryId === category.id ? null : category.id
+                    )
+                  }
+                />
+              ))}
+              {categories.length > 4 && (
+                <Text style={[styles.moreText, { color: theme.colors.textTertiary }]}>
+                  +{categories.length - 4}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Tag filters */}
         {tags.length > 0 && (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Badge } from '@/components/ui';
+import { CategoryBadge } from '@/components/categories';
 import { useTheme } from '@/hooks/useTheme';
 import { JournalEntry } from '@/types';
 import { getSmartDate, getPreview } from '@/utils';
@@ -61,9 +62,18 @@ export function EntryCard({ entry, onPress }: EntryCardProps) {
         </Text>
 
         <View style={styles.footer}>
-          <Text style={[styles.date, { color: theme.colors.textTertiary }]}>
-            {getSmartDate(entry.createdAt)}
-          </Text>
+          <View style={styles.footerLeft}>
+            <Text style={[styles.date, { color: theme.colors.textTertiary }]}>
+              {getSmartDate(entry.createdAt)}
+            </Text>
+            {entry.category && (
+              <CategoryBadge
+                category={entry.category}
+                size="small"
+                showIcon={true}
+              />
+            )}
+          </View>
           {entry.tags.length > 0 && (
             <View style={styles.tags}>
               {entry.tags.slice(0, config.maxTagsOnCard).map((tag) => (
@@ -130,6 +140,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   date: {
     fontSize: 12,
