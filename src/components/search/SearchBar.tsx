@@ -3,10 +3,10 @@ import {
   View,
   TextInput,
   Pressable,
-  Text,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 
 interface SearchBarProps {
@@ -52,9 +52,12 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
           style,
         ]}
       >
-        <Text style={[styles.searchIcon, { color: theme.colors.textTertiary }]}>
-          search
-        </Text>
+        <Ionicons
+          name="search-outline"
+          size={20}
+          color={theme.colors.textTertiary}
+          style={styles.searchIcon}
+        />
         <TextInput
           ref={ref}
           style={[
@@ -84,9 +87,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
               },
             ]}
           >
-            <Text style={[styles.clearIcon, { color: theme.colors.textSecondary }]}>
-              x
-            </Text>
+            <Ionicons name="close" size={14} color={theme.colors.textSecondary} />
           </Pressable>
         )}
       </View>
@@ -106,7 +107,6 @@ const styles = StyleSheet.create({
     height: 48,
   },
   searchIcon: {
-    fontSize: 16,
     marginRight: 8,
   },
   input: {
@@ -120,9 +120,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  clearIcon: {
-    fontSize: 12,
-    fontWeight: '600',
   },
 });

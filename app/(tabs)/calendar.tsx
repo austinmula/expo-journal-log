@@ -120,7 +120,7 @@ export default function CalendarScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <EmptyState
-              icon={selectedDate && isSameDay(selectedDate, new Date()) ? 'today' : 'calendar'}
+              icon={selectedDate && isSameDay(selectedDate, new Date()) ? 'today-outline' : 'calendar-outline'}
               title="No Entries"
               description={
                 selectedDate && isSameDay(selectedDate, new Date())
@@ -142,7 +142,7 @@ export default function CalendarScreen() {
         />
       )}
 
-      <FloatingActionButton icon="+" onPress={handleCreateEntry} />
+      <FloatingActionButton icon="add" onPress={handleCreateEntry} />
     </View>
   );
 }

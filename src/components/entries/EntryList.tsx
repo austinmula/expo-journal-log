@@ -94,7 +94,7 @@ export function EntryList({
   if (entries.length === 0 && !isLoading) {
     return (
       <EmptyState
-        icon="book"
+        icon="book-outline"
         title={emptyTitle}
         description={emptyDescription}
         actionLabel={emptyActionLabel}

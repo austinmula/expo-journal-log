@@ -90,7 +90,7 @@ export default function TrashScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <EmptyState
-          icon="trash"
+          icon="trash-outline"
           title="Trash is Empty"
           description="Deleted entries will appear here for 30 days before being permanently removed."
         />

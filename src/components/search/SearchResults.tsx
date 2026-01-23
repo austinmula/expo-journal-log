@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 import { SearchResult } from '@/services/searchService';
 import { Badge } from '@/components/ui';
@@ -121,7 +122,12 @@ function DefaultEmptyState({ query, theme }: DefaultEmptyStateProps) {
   if (!query.trim()) {
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>search</Text>
+        <Ionicons
+          name="search-outline"
+          size={48}
+          color={theme.colors.textTertiary}
+          style={styles.emptyIcon}
+        />
         <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
           Search Your Journal
         </Text>
@@ -134,7 +140,12 @@ function DefaultEmptyState({ query, theme }: DefaultEmptyStateProps) {
 
   return (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>-</Text>
+      <Ionicons
+        name="document-outline"
+        size={48}
+        color={theme.colors.textTertiary}
+        style={styles.emptyIcon}
+      />
       <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
         No Results Found
       </Text>
@@ -210,9 +221,7 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 16,
-    opacity: 0.5,
   },
   emptyTitle: {
     fontSize: 18,

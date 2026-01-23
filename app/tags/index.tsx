@@ -112,7 +112,7 @@ export default function TagsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <EmptyState
-          icon="tag"
+          icon="pricetag-outline"
           title="No Tags Yet"
           description="Create tags to organize your journal entries by topics, themes, or categories."
           actionLabel="Create Tag"

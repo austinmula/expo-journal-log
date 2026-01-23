@@ -82,7 +82,7 @@ export default function HomeScreen() {
       />
 
       <FloatingActionButton
-        icon="+"
+        icon="add"
         onPress={handleCreateEntry}
       />
     </View>

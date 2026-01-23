@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { ComponentProps } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 import { Button } from './Button';
 
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
+
 interface EmptyStateProps {
-  icon?: string;
+  icon?: IoniconsName;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -31,9 +34,9 @@ export function EmptyState({
       ]}
     >
       {icon && (
-        <Text style={[styles.icon, { marginBottom: theme.spacing.md }]}>
-          {icon}
-        </Text>
+        <View style={{ marginBottom: theme.spacing.md }}>
+          <Ionicons name={icon} size={48} color={theme.colors.textTertiary} />
+        </View>
       )}
       <Text
         style={[
@@ -64,9 +67,6 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 48,
   },
   title: {
     fontSize: 18,

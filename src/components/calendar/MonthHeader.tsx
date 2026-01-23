@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { format } from 'date-fns';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 
 interface MonthHeaderProps {
@@ -32,7 +33,7 @@ export function MonthHeader({
           ]}
           hitSlop={8}
         >
-          <Text style={[styles.navIcon, { color: theme.colors.text }]}>{'<'}</Text>
+          <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
         </Pressable>
 
         <View style={styles.titleContainer}>
@@ -52,7 +53,7 @@ export function MonthHeader({
           ]}
           hitSlop={8}
         >
-          <Text style={[styles.navIcon, { color: theme.colors.text }]}>{'>'}</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
         </Pressable>
       </View>
 
@@ -93,10 +94,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  navIcon: {
-    fontSize: 18,
-    fontWeight: '600',
   },
   titleContainer: {
     flex: 1,

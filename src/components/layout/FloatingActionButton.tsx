@@ -1,9 +1,12 @@
-import React from 'react';
-import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
+import React, { ComponentProps } from 'react';
+import { Pressable, StyleSheet, ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 
+type IoniconsName = ComponentProps<typeof Ionicons>['name'];
+
 interface FloatingActionButtonProps {
-  icon: string;
+  icon: IoniconsName;
   onPress: () => void;
   style?: ViewStyle;
 }
@@ -29,9 +32,7 @@ export function FloatingActionButton({
       ]}
       onPress={onPress}
     >
-      <Text style={[styles.icon, { color: theme.colors.textInverse }]}>
-        {icon}
-      </Text>
+      <Ionicons name={icon} size={28} color={theme.colors.textInverse} />
     </Pressable>
   );
 }
@@ -50,9 +51,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 8,
-  },
-  icon: {
-    fontSize: 28,
-    fontWeight: '400',
   },
 });

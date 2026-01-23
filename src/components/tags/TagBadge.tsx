@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/hooks/useTheme';
 import { Tag } from '@/types';
 
@@ -61,7 +62,7 @@ export function TagBadge({
           hitSlop={8}
           style={styles.removeButton}
         >
-          <Text style={[styles.removeText, { color: tag.color }]}>x</Text>
+          <Ionicons name="close" size={12} color={tag.color} />
         </Pressable>
       )}
     </>
@@ -117,9 +118,5 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     marginLeft: 4,
-  },
-  removeText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
 });
