@@ -4,11 +4,29 @@ export interface EntryRow {
   title: string;
   content: string;
   mood: string | null;
+  category_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   sync_status: string;
   sync_version: number;
+}
+
+export interface CategoryRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface EntryWithCategoryRow extends EntryRow {
+  category_name: string | null;
+  category_icon: string | null;
+  category_color: string | null;
+  category_sort_order: number | null;
+  category_created_at: string | null;
 }
 
 export interface TagRow {

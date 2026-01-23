@@ -1,3 +1,5 @@
+import { Category } from './category';
+
 export type MoodType = 'great' | 'good' | 'okay' | 'bad' | 'terrible';
 
 export type SyncStatus = 'pending' | 'synced' | 'conflict';
@@ -14,6 +16,8 @@ export interface JournalEntry {
   title: string;
   content: string;
   mood?: MoodType;
+  categoryId?: string;
+  category?: Category;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -26,6 +30,7 @@ export interface CreateEntryInput {
   title: string;
   content: string;
   mood?: MoodType;
+  categoryId?: string;
   tagIds?: string[];
 }
 
@@ -33,6 +38,7 @@ export interface UpdateEntryInput {
   title?: string;
   content?: string;
   mood?: MoodType;
+  categoryId?: string | null;
   tagIds?: string[];
 }
 
