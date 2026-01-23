@@ -9,6 +9,7 @@ interface EntryState {
   error: string | null;
   selectedTagId: string | null;
   selectedMood: MoodType | null;
+  selectedCategoryId: string | null;
 
   // Actions
   loadEntries: () => Promise<void>;
@@ -22,6 +23,7 @@ interface EntryState {
   getEntryById: (id: string) => JournalEntry | undefined;
   setSelectedTag: (tagId: string | null) => void;
   setSelectedMood: (mood: MoodType | null) => void;
+  setSelectedCategory: (categoryId: string | null) => void;
   clearFilters: () => void;
 }
 
@@ -32,6 +34,7 @@ export const useEntryStore = create<EntryState>((set, get) => ({
   error: null,
   selectedTagId: null,
   selectedMood: null,
+  selectedCategoryId: null,
 
   loadEntries: async () => {
     set({ isLoading: true, error: null });
@@ -161,20 +164,27 @@ export const useEntryStore = create<EntryState>((set, get) => ({
     set({ selectedMood: mood });
   },
 
+  setSelectedCategory: (categoryId) => {
+    set({ selectedCategoryId: categoryId });
+  },
+
   clearFilters: () => {
-    set({ selectedTagId: null, selectedMood: null });
+    set({ selectedTagId: null, selectedMood: null, selectedCategoryId: null });
   },
 }));
 
 // Selector hooks for filtered entries
 export const useFilteredEntries = () => {
-  const { entries, selectedTagId, selectedMood } = useEntryStore();
+  const { entries, selectedTagId, selectedMood, selectedCategoryId } = useEntryStore();
 
   return entries.filter((entry) => {
     if (selectedTagId && !entry.tags.some((t) => t.id === selectedTagId)) {
       return false;
     }
     if (selectedMood && entry.mood !== selectedMood) {
+      return false;
+    }
+    if (selectedCategoryId && entry.categoryId !== selectedCategoryId) {
       return false;
     }
     return true;
