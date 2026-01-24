@@ -11,7 +11,7 @@ import { LoadingState } from '@/components/ui';
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { loadEntries, isLoading, selectedTagId, selectedMood } = useEntryStore();
+  const { loadEntries, isLoading, selectedTagId, selectedMood, selectedCategoryId } = useEntryStore();
   const { loadTags } = useTagStore();
   const entries = useFilteredEntries();
   const [showFilters, setShowFilters] = useState(false);
@@ -32,7 +32,7 @@ export default function HomeScreen() {
     loadEntries();
   };
 
-  const hasActiveFilters = selectedTagId || selectedMood;
+  const hasActiveFilters = selectedTagId || selectedMood || selectedCategoryId;
 
   if (isLoading && entries.length === 0) {
     return (
