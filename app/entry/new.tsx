@@ -14,9 +14,10 @@ import { useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { useEntryStore, useTagStore } from '@/stores';
+import { useEntryStore, useTagStore, useCategoryStore } from '@/stores';
 import { MoodSelector } from '@/components/entries/MoodSelector';
 import { TagPicker, TagBadge } from '@/components/tags';
+import { CategoryPicker, CategoryPickerInline } from '@/components/categories';
 import { Button } from '@/components/ui';
 import { MoodType } from '@/types';
 import { generateTitleFromContent } from '@/utils';
@@ -28,22 +29,26 @@ export default function NewEntryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { createEntry, updateEntry } = useEntryStore();
-  const { tags, loadTags, setTagsForEntry } = useTagStore();
+  const { tags, loadTags } = useTagStore();
+  const { categories, loadCategories } = useCategoryStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType | undefined>();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [entryId, setEntryId] = useState<string | null>(null);
   const [isTagPickerVisible, setIsTagPickerVisible] = useState(false);
+  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
 
   const contentRef = useRef<TextInput>(null);
   const isCreatingRef = useRef(false);
 
   useEffect(() => {
     loadTags();
-  }, [loadTags]);
+    loadCategories();
+  }, [loadTags, loadCategories]);
 
   const handleSave = useCallback(async () => {
     if (isCreatingRef.current || (!content.trim() && !title.trim())) {
@@ -59,6 +64,7 @@ export default function NewEntryScreen() {
           title: entryTitle,
           content: content.trim(),
           mood,
+          categoryId: selectedCategoryId,
           tagIds: selectedTagIds,
         });
         setIsSaved(true);
@@ -67,6 +73,7 @@ export default function NewEntryScreen() {
           title: entryTitle,
           content: content.trim(),
           mood,
+          categoryId: selectedCategoryId || undefined,
           tagIds: selectedTagIds,
         });
         setEntryId(entry.id);
@@ -78,7 +85,7 @@ export default function NewEntryScreen() {
     } finally {
       isCreatingRef.current = false;
     }
-  }, [title, content, mood, selectedTagIds, entryId, createEntry, updateEntry]);
+  }, [title, content, mood, selectedCategoryId, selectedTagIds, entryId, createEntry, updateEntry]);
 
   const { isSaving, hasUnsavedChanges, scheduleAutoSave, saveNow } = useAutoSave({
     delay: config.autoSaveDelay,
@@ -108,6 +115,13 @@ export default function NewEntryScreen() {
 
   const handleTagsChange = (tagIds: string[]) => {
     setSelectedTagIds(tagIds);
+    if (content.trim()) {
+      scheduleAutoSave();
+    }
+  };
+
+  const handleCategoryChange = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
     if (content.trim()) {
       scheduleAutoSave();
     }
@@ -207,6 +221,19 @@ export default function NewEntryScreen() {
             autoFocus
           />
 
+          {/* Category section */}
+          <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+                Category
+              </Text>
+            </View>
+            <CategoryPickerInline
+              selectedCategoryId={selectedCategoryId}
+              onPress={() => setIsCategoryPickerVisible(true)}
+            />
+          </View>
+
           {/* Tags section */}
           <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
             <View style={styles.sectionHeader}>
@@ -256,6 +283,13 @@ export default function NewEntryScreen() {
         onClose={() => setIsTagPickerVisible(false)}
         selectedTagIds={selectedTagIds}
         onTagsChange={handleTagsChange}
+      />
+
+      <CategoryPicker
+        visible={isCategoryPickerVisible}
+        onClose={() => setIsCategoryPickerVisible(false)}
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={handleCategoryChange}
       />
     </>
   );

@@ -14,9 +14,10 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { useEntryStore, useTagStore } from '@/stores';
+import { useEntryStore, useTagStore, useCategoryStore } from '@/stores';
 import { MoodSelector } from '@/components/entries/MoodSelector';
 import { TagPicker, TagBadge } from '@/components/tags';
+import { CategoryPicker, CategoryPickerInline, CategoryBadge } from '@/components/categories';
 import { Button, LoadingState } from '@/components/ui';
 import { MoodType, Tag } from '@/types';
 import { formatDateTime } from '@/utils';
@@ -31,15 +32,18 @@ export default function EntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getEntryById, updateEntry, deleteEntry, loadEntries } = useEntryStore();
   const { tags, loadTags } = useTagStore();
+  const { categories, loadCategories, getCategoryById } = useCategoryStore();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType | undefined>();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [createdAt, setCreatedAt] = useState<Date | null>(null);
   const [isTagPickerVisible, setIsTagPickerVisible] = useState(false);
+  const [isCategoryPickerVisible, setIsCategoryPickerVisible] = useState(false);
 
   const contentRef = useRef<TextInput>(null);
   const hasLoadedRef = useRef(false);
@@ -51,6 +55,7 @@ export default function EntryScreen() {
       hasLoadedRef.current = true;
 
       await loadTags();
+      await loadCategories();
       await loadEntries();
 
       const entry = getEntryById(id);
@@ -60,12 +65,13 @@ export default function EntryScreen() {
         setMood(entry.mood);
         setCreatedAt(entry.createdAt);
         setSelectedTagIds(entry.tags.map((t) => t.id));
+        setSelectedCategoryId(entry.categoryId || null);
       }
       setIsLoading(false);
     };
 
     loadEntry();
-  }, [id, getEntryById, loadEntries, loadTags]);
+  }, [id, getEntryById, loadEntries, loadTags, loadCategories]);
 
   const handleSave = useCallback(async () => {
     if (!id) return;
@@ -75,12 +81,13 @@ export default function EntryScreen() {
         title: title.trim() || 'Untitled',
         content: content.trim(),
         mood,
+        categoryId: selectedCategoryId,
         tagIds: selectedTagIds,
       });
     } catch (error) {
       console.error('Failed to save entry:', error);
     }
-  }, [id, title, content, mood, selectedTagIds, updateEntry]);
+  }, [id, title, content, mood, selectedCategoryId, selectedTagIds, updateEntry]);
 
   const { isSaving, hasUnsavedChanges, scheduleAutoSave, saveNow } = useAutoSave({
     delay: config.autoSaveDelay,
@@ -104,6 +111,11 @@ export default function EntryScreen() {
 
   const handleTagsChange = (tagIds: string[]) => {
     setSelectedTagIds(tagIds);
+    scheduleAutoSave();
+  };
+
+  const handleCategoryChange = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
     scheduleAutoSave();
   };
 
@@ -150,6 +162,7 @@ export default function EntryScreen() {
   }
 
   const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id));
+  const selectedCategory = selectedCategoryId ? getCategoryById(selectedCategoryId) : undefined;
   const moodConfig = getMoodConfig(mood);
 
   return (
@@ -237,6 +250,19 @@ export default function EntryScreen() {
                 textAlignVertical="top"
               />
 
+              {/* Category section */}
+              <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>
+                    Category
+                  </Text>
+                </View>
+                <CategoryPickerInline
+                  selectedCategoryId={selectedCategoryId}
+                  onPress={() => setIsCategoryPickerVisible(true)}
+                />
+              </View>
+
               {/* Tags section */}
               <View style={[styles.section, { borderTopColor: theme.colors.borderLight }]}>
                 <View style={styles.sectionHeader}>
@@ -285,8 +311,11 @@ export default function EntryScreen() {
                 {title || 'Untitled'}
               </Text>
 
-              {(moodConfig || selectedTags.length > 0) && (
+              {(moodConfig || selectedTags.length > 0 || selectedCategory) && (
                 <View style={styles.metaRow}>
+                  {selectedCategory && (
+                    <CategoryBadge category={selectedCategory} size="small" />
+                  )}
                   {moodConfig && (
                     <View style={styles.moodDisplay}>
                       <Text style={styles.moodEmoji}>{moodConfig.emoji}</Text>
@@ -318,6 +347,13 @@ export default function EntryScreen() {
         onClose={() => setIsTagPickerVisible(false)}
         selectedTagIds={selectedTagIds}
         onTagsChange={handleTagsChange}
+      />
+
+      <CategoryPicker
+        visible={isCategoryPickerVisible}
+        onClose={() => setIsCategoryPickerVisible(false)}
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={handleCategoryChange}
       />
     </>
   );
