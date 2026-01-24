@@ -1162,6 +1162,90 @@ const styles = StyleSheet.create({
 - [ ] Tag management screen
 - [ ] Mood tracking feature
 
+### Phase 3.5: Journal Categories
+
+**Overview:**
+Allow users to organize entries into distinct journal categories (e.g., "Personal", "Book Notes", "Work", "Travel", "Gratitude"). Categories are separate from tags and moods - they represent the type/purpose of the journal.
+
+**Database Schema:**
+```sql
+-- Categories table
+CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    icon TEXT,                    -- Ionicons icon name
+    color TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
+-- Add category reference to entries
+ALTER TABLE entries ADD COLUMN category_id TEXT REFERENCES categories(id);
+CREATE INDEX IF NOT EXISTS idx_entries_category ON entries(category_id);
+
+-- Default categories (seeded on first run)
+INSERT INTO categories (id, name, icon, color, sort_order, created_at) VALUES
+  ('default-personal', 'Personal', 'journal-outline', '#6366F1', 0, datetime('now')),
+  ('default-work', 'Work', 'briefcase-outline', '#F59E0B', 1, datetime('now')),
+  ('default-book', 'Book Notes', 'book-outline', '#10B981', 2, datetime('now')),
+  ('default-travel', 'Travel', 'airplane-outline', '#EC4899', 3, datetime('now')),
+  ('default-gratitude', 'Gratitude', 'heart-outline', '#EF4444', 4, datetime('now'));
+```
+
+**New Types:**
+```typescript
+// src/types/category.ts
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string;       // Ionicons name
+  color: string;
+  sortOrder: number;
+  createdAt: Date;
+}
+
+export interface CreateCategoryInput {
+  name: string;
+  icon?: string;
+  color: string;
+}
+```
+
+**New Services:**
+- `src/services/categoryRepository.ts` - CRUD operations for categories
+
+**New Components:**
+- `src/components/categories/CategoryBadge.tsx` - Display category with icon/color
+- `src/components/categories/CategoryPicker.tsx` - Select category for entry
+- `src/components/categories/CategoryEditor.tsx` - Create/edit category
+- `src/components/categories/CategoryList.tsx` - List all categories
+
+**New Store:**
+- `src/stores/categoryStore.ts` - Zustand store for categories
+
+**UI Integration:**
+- Entry creation: Category picker (required or optional with default)
+- Entry cards: Show category badge
+- Home screen: Filter by category (tabs or dropdown)
+- Settings: Manage categories screen
+- Search filters: Include category filter
+
+**Implementation Tasks:**
+- [ ] Create categories table and seed defaults
+- [ ] Add category_id to entries table
+- [ ] Create Category types
+- [ ] Implement categoryRepository
+- [ ] Create categoryStore (Zustand)
+- [ ] Create CategoryBadge component
+- [ ] Create CategoryPicker component
+- [ ] Add category selection to entry creation
+- [ ] Display category on EntryCard
+- [ ] Add category filter to home screen
+- [ ] Add category filter to search
+- [ ] Create category management screen in settings
+
+---
+
 ### Phase 4: Search and Discovery (Week 5)
 
 - [ ] FTS5 search implementation
@@ -1170,6 +1254,189 @@ const styles = StyleSheet.create({
 - [ ] Recent searches
 - [ ] Calendar view
 - [ ] Date-based filtering
+
+### Phase 4.5: Audio Entries with Transcription
+
+**Overview:**
+Allow users to create journal entries by recording audio, with automatic speech-to-text transcription to populate the entry content.
+
+**Required Dependencies:**
+```bash
+npx expo install expo-av                    # Audio recording and playback
+npx expo install expo-file-system           # Already installed - audio file storage
+npm install @anthropic-ai/sdk               # Or alternative: OpenAI Whisper API, Deepgram, AssemblyAI
+```
+
+**App Configuration (app.json plugins):**
+```json
+{
+  "plugins": [
+    [
+      "expo-av",
+      {
+        "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone to record voice journal entries."
+      }
+    ]
+  ]
+}
+```
+
+**Database Schema Changes:**
+```sql
+-- Add audio reference to entries table
+ALTER TABLE entries ADD COLUMN audio_uri TEXT;
+ALTER TABLE entries ADD COLUMN audio_duration INTEGER;  -- Duration in milliseconds
+ALTER TABLE entries ADD COLUMN transcription_status TEXT DEFAULT NULL;
+-- 'pending' | 'processing' | 'completed' | 'failed'
+
+-- Audio recordings table (for storing metadata)
+CREATE TABLE IF NOT EXISTS audio_recordings (
+    id TEXT PRIMARY KEY,
+    entry_id TEXT,
+    file_uri TEXT NOT NULL,
+    duration INTEGER NOT NULL,
+    file_size INTEGER,
+    created_at TEXT NOT NULL,
+    transcription TEXT,
+    transcription_status TEXT DEFAULT 'pending',
+    FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_entry_id ON audio_recordings(entry_id);
+```
+
+**New Types:**
+```typescript
+// src/types/audio.ts
+export interface AudioRecording {
+  id: string;
+  entryId?: string;
+  fileUri: string;
+  duration: number;  // milliseconds
+  fileSize?: number;
+  createdAt: Date;
+  transcription?: string;
+  transcriptionStatus: 'pending' | 'processing' | 'completed' | 'failed';
+}
+
+export interface TranscriptionResult {
+  text: string;
+  confidence?: number;
+  segments?: TranscriptionSegment[];
+}
+
+export interface TranscriptionSegment {
+  start: number;  // milliseconds
+  end: number;
+  text: string;
+}
+```
+
+**New Services:**
+
+1. **Audio Recording Service** (`src/services/audioService.ts`):
+   - Initialize audio session with proper iOS/Android settings
+   - Start/stop/pause recording
+   - Save recording to local file system
+   - Get recording duration and file size
+   - Playback controls for reviewing recordings
+
+2. **Transcription Service** (`src/services/transcriptionService.ts`):
+   - Send audio file to transcription API (options below)
+   - Handle chunked uploads for large files
+   - Parse and return transcription results
+   - Offline queue for transcription requests when online
+   - Retry logic for failed transcriptions
+
+**Transcription API Options:**
+
+| Provider | Pros | Cons |
+|----------|------|------|
+| OpenAI Whisper API | High accuracy, handles multiple languages | Requires network, paid |
+| Deepgram | Fast, real-time option available | Requires network, paid |
+| AssemblyAI | Good accuracy, speaker diarization | Requires network, paid |
+| expo-speech (on-device) | Offline, free | Lower accuracy, limited languages |
+| React Native Voice | On-device, real-time | Setup complexity, platform differences |
+
+**Recommended Approach:** Use OpenAI Whisper API for transcription quality, with local audio storage so entries are preserved even if transcription fails. Queue transcriptions for when device is online.
+
+**New Components:**
+
+1. **AudioRecordButton** (`src/components/audio/AudioRecordButton.tsx`):
+   - Microphone button with recording state indicator
+   - Pulse animation while recording
+   - Duration display during recording
+
+2. **AudioRecorder** (`src/components/audio/AudioRecorder.tsx`):
+   - Full recording interface with start/stop/cancel
+   - Waveform visualization (optional)
+   - Recording time display
+   - Review playback before saving
+
+3. **AudioPlayer** (`src/components/audio/AudioPlayer.tsx`):
+   - Play/pause/seek controls
+   - Duration and progress display
+   - Playback speed options (0.5x, 1x, 1.5x, 2x)
+
+4. **TranscriptionStatus** (`src/components/audio/TranscriptionStatus.tsx`):
+   - Shows pending/processing/completed/failed state
+   - Retry button for failed transcriptions
+   - Edit transcription text option
+
+**New Screens/Routes:**
+
+1. **Audio Entry Modal** (`app/entry/audio.tsx`):
+   - Recording interface
+   - Preview and transcription display
+   - Edit transcription before saving
+   - Save as new entry or add to existing
+
+**User Flow:**
+
+1. User taps microphone FAB or "Record" button on new entry screen
+2. Permission prompt (first time only)
+3. Recording starts with visual feedback
+4. User taps stop when done
+5. Audio saved locally immediately (offline-first)
+6. Transcription request queued
+7. When online, audio sent to transcription API
+8. Transcription populates entry content field
+9. User can edit transcription and save entry
+10. Audio file linked to entry for later playback
+
+**Offline Behavior:**
+- Audio recordings always saved locally first
+- Transcription queued for when device is online
+- Entry created immediately with "Transcription pending" placeholder
+- User can manually type content while waiting
+- Transcription replaces/appends when completed
+
+**Implementation Tasks:**
+
+- [ ] Install expo-av and configure permissions
+- [ ] Create audio_recordings table and update entries schema
+- [ ] Implement AudioService for recording/playback
+- [ ] Implement TranscriptionService with API integration
+- [ ] Create AudioRecordButton component
+- [ ] Create AudioRecorder component with full UI
+- [ ] Create AudioPlayer component for playback
+- [ ] Create TranscriptionStatus indicator component
+- [ ] Add audio recording option to entry creation flow
+- [ ] Create audio entry modal/screen
+- [ ] Add audio playback to entry view screen
+- [ ] Implement transcription queue for offline support
+- [ ] Handle transcription errors and retries
+- [ ] Add audio duration to entry cards (optional)
+- [ ] Settings: choose transcription provider, auto-transcribe toggle
+
+**Storage Considerations:**
+- Store audio files in app's document directory (`FileSystem.documentDirectory`)
+- Naming convention: `audio_{entryId}_{timestamp}.m4a`
+- Consider max recording duration (e.g., 10 minutes)
+- Consider audio compression settings for storage/upload balance
+- Cleanup orphaned audio files periodically
+
+---
 
 ### Phase 5: Polish and Enhancement (Week 6)
 
