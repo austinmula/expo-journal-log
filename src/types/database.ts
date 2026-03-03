@@ -47,3 +47,18 @@ export interface SearchResultRow {
   created_at: string;
   snippet: string;
 }
+
+export interface MoodCountRow {
+  mood: string;
+  count: number;
+}
+
+export interface MoodTrendRow {
+  date: string;  // DATE(created_at), e.g. '2026-01-15'
+  mood: string;
+}
+
+export interface DayOfWeekCountRow {
+  day_of_week: number;  // 0=Sunday … 6=Saturday
+  count: number;
+}
